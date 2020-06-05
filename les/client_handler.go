@@ -30,6 +30,12 @@ import (
 	"github.com/ethereum/go-ethereum/log"
 	"github.com/ethereum/go-ethereum/p2p"
 	"github.com/ethereum/go-ethereum/params"
+	
+	//----------------------
+	// GF
+	"github.com/ethereum/go-ethereum/gf/gf_events"
+
+	//----------------------
 )
 
 // clientHandler is responsible for receiving and processing all incoming server
@@ -64,8 +70,31 @@ func newClientHandler(ulcServers []string, ulcFraction int, checkpoint *params.T
 	if checkpoint != nil {
 		height = (checkpoint.SectionIndex+1)*params.CHTFrequency - 1
 	}
+
+	//----------------------
+	// GF
+	gfEventProcessor, err := gf_events.EventProcessorCreate()
+	if err != nil {
+		panic(err)
+	}
+
+	//----------------------
+
 	handler.fetcher = newLightFetcher(handler, backend.serverPool.getTimeout)
-	handler.downloader = downloader.New(height, backend.chainDb, nil, backend.eventMux, nil, backend.blockchain, handler.removePeer)
+	handler.downloader = downloader.New(height,
+		backend.chainDb,
+		nil,
+		backend.eventMux,
+		nil,
+		backend.blockchain,
+		handler.removePeer,
+
+		//----------------------
+		// GF
+		gfEventProcessor)
+
+		//----------------------
+
 	handler.backend.peers.subscribe((*downloaderPeerNotify)(handler))
 	return handler
 }

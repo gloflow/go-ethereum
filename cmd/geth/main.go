@@ -42,6 +42,12 @@ import (
 	"github.com/ethereum/go-ethereum/node"
 	gopsutil "github.com/shirou/gopsutil/mem"
 	cli "gopkg.in/urfave/cli.v1"
+
+	//----------------------
+	// GF
+	"github.com/ethereum/go-ethereum/gf"
+
+	//----------------------
 )
 
 const (
@@ -346,6 +352,13 @@ func geth(ctx *cli.Context) error {
 	prepare(ctx)
 	node := makeFullNode(ctx)
 	defer node.Close()
+
+	//------------------------
+	// GF
+	_ = gf.Init()
+	
+	//------------------------
+
 	startNode(ctx, node)
 	node.Wait()
 	return nil

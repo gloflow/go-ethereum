@@ -41,6 +41,13 @@ import (
 	"github.com/ethereum/go-ethereum/params"
 	"github.com/ethereum/go-ethereum/rlp"
 	"github.com/ethereum/go-ethereum/trie"
+
+	//----------------------
+	// GF
+	"github.com/ethereum/go-ethereum/gf/gf_events"
+	// "github.com/davecgh/go-spew/spew"
+
+	//----------------------
 )
 
 const (
@@ -97,11 +104,35 @@ type ProtocolManager struct {
 
 	// Test fields or hooks
 	broadcastTxAnnouncesOnly bool // Testing field, disable transaction propagation
+
+	//----------------------
+	// GF
+	gfEventProcessor *gf_events.GFeventProcessor
+
+	//----------------------
 }
 
 // NewProtocolManager returns a new Ethereum sub protocol manager. The Ethereum sub protocol manages peers capable
 // with the Ethereum network.
-func NewProtocolManager(config *params.ChainConfig, checkpoint *params.TrustedCheckpoint, mode downloader.SyncMode, networkID uint64, mux *event.TypeMux, txpool txPool, engine consensus.Engine, blockchain *core.BlockChain, chaindb ethdb.Database, cacheLimit int, whitelist map[uint64]common.Hash) (*ProtocolManager, error) {
+func NewProtocolManager(config *params.ChainConfig,
+	checkpoint *params.TrustedCheckpoint,
+	mode downloader.SyncMode,
+	networkID uint64,
+	mux *event.TypeMux,
+	txpool txPool,
+	engine consensus.Engine,
+	blockchain *core.BlockChain,
+	chaindb ethdb.Database,
+	cacheLimit int,
+	whitelist map[uint64]common.Hash,
+
+	//----------------------
+	// GF
+	pGFeventProcessor *gf_events.GFeventProcessor
+	
+	//----------------------
+	) (*ProtocolManager, error) {
+
 	// Create the protocol manager with the base fields
 	manager := &ProtocolManager{
 		networkID:  networkID,
@@ -114,6 +145,12 @@ func NewProtocolManager(config *params.ChainConfig, checkpoint *params.TrustedCh
 		whitelist:  whitelist,
 		txsyncCh:   make(chan *txsync),
 		quitSync:   make(chan struct{}),
+
+		//----------------------
+		// GF
+		gfEventProcessor: pGFeventProcessor,
+
+		//----------------------
 	}
 
 	if mode == downloader.FullSync {
@@ -153,7 +190,20 @@ func NewProtocolManager(config *params.ChainConfig, checkpoint *params.TrustedCh
 	if atomic.LoadUint32(&manager.fastSync) == 1 {
 		stateBloom = trie.NewSyncBloom(uint64(cacheLimit), chaindb)
 	}
-	manager.downloader = downloader.New(manager.checkpointNumber, chaindb, stateBloom, manager.eventMux, blockchain, nil, manager.removePeer)
+	
+	manager.downloader = downloader.New(manager.checkpointNumber,
+		chaindb,
+		stateBloom,
+		manager.eventMux,
+		blockchain,
+		nil,
+		manager.removePeer,
+
+		//----------------------
+		// GF
+		pGFeventProcessor)
+
+		//----------------------
 
 	// Construct the fetcher (short sync)
 	validator := func(header *types.Header) error {
@@ -305,6 +355,27 @@ func (pm *ProtocolManager) runPeer(p *peer) error {
 // handle is the callback invoked to manage the life cycle of an eth peer. When
 // this function terminates, the peer is disconnected.
 func (pm *ProtocolManager) handle(p *peer) error {
+
+
+	//----------------------
+	// GF
+	
+	peerEnodeID := p.Peer.ID()
+	peerName := p.Peer.Name()
+	remoteAddress := p.Peer.RemoteAddr()
+	gf_events.EventSend("protocol_manager", "handle_new_peer",
+		fmt.Sprintf("handle the lifecycle of a new peer - name[%70s] - ip[%s] - enode_id[%s]", peerName, fmt.Sprint(remoteAddress), peerEnodeID),
+		interface{}(gf_events.GFeventNewPeerLifecycle{
+			PeerEnodeID:   fmt.Sprint(peerEnodeID),
+			Name:          peerName,
+			RemoteAddress: fmt.Sprint(remoteAddress),
+			LocalAddress:  fmt.Sprint(p.Peer.LocalAddr()),
+		}),
+		pm.gfEventProcessor)
+	
+	//----------------------
+
+
 	// Ignore maxPeers if this is a trusted peer
 	if pm.peers.Len() >= pm.maxPeers && !p.Peer.Info().Network.Trusted {
 		return p2p.DiscTooManyPeers
@@ -499,6 +570,27 @@ func (pm *ProtocolManager) handleMsg(p *peer) error {
 			// joining the network
 			if atomic.LoadUint32(&pm.fastSync) == 1 {
 				p.Log().Warn("Dropping unsynced node during fast sync", "addr", p.RemoteAddr(), "type", p.Name())
+				
+
+				//----------------------
+				//GF
+
+				peerEnodeID := p.Peer.ID()
+				peerName := p.Peer.Name()
+				remoteAddress := p.Peer.RemoteAddr()
+				gf_events.EventSend("protocol_manager", "dropping_unsynced_node_during_fast_sync",
+					fmt.Sprintf("unsynced node cant serve fast sync - dropping - name[%70s] - ip[%s] - enode_id[%s]", peerName, fmt.Sprint(remoteAddress), peerEnodeID),
+					interface{}(gf_events.GFeventDroppingUnsyncedNodeDuringFastSync{
+						PeerEnodeID:   fmt.Sprint(peerEnodeID),
+						Name:          peerName,
+						RemoteAddress: fmt.Sprint(remoteAddress),
+						LocalAddress:  fmt.Sprint(p.Peer.LocalAddr()),
+					}),
+					pm.gfEventProcessor)
+				
+				//----------------------
+
+
 				return errors.New("unsynced node cannot serve fast sync")
 			}
 		}

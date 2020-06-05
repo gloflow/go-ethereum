@@ -35,6 +35,13 @@ import (
 	"github.com/ethereum/go-ethereum/metrics"
 	"github.com/ethereum/go-ethereum/params"
 	"github.com/ethereum/go-ethereum/trie"
+
+	//----------------------
+	// GF
+	"github.com/ethereum/go-ethereum/gf/gf_events"
+	//"github.com/davecgh/go-spew/spew"
+
+	//----------------------
 )
 
 var (
@@ -157,6 +164,12 @@ type Downloader struct {
 	bodyFetchHook    func([]*types.Header) // Method to call upon starting a block body fetch
 	receiptFetchHook func([]*types.Header) // Method to call upon starting a receipt fetch
 	chainInsertHook  func([]*fetchResult)  // Method to call upon inserting a chain of blocks (possibly in multiple invocations)
+
+	//--------------
+	// GF
+	gfEventProcessor *gf_events.GFeventProcessor
+
+	//--------------
 }
 
 // LightChain encapsulates functions required to synchronise a light chain.
@@ -210,7 +223,21 @@ type BlockChain interface {
 }
 
 // New creates a new downloader to fetch hashes and blocks from remote peers.
-func New(checkpoint uint64, stateDb ethdb.Database, stateBloom *trie.SyncBloom, mux *event.TypeMux, chain BlockChain, lightchain LightChain, dropPeer peerDropFn) *Downloader {
+func New(checkpoint uint64,
+	stateDb ethdb.Database,
+	stateBloom *trie.SyncBloom,
+	mux *event.TypeMux,
+	chain BlockChain,
+	lightchain LightChain,
+	dropPeer peerDropFn,
+
+	//----------------------
+	// GF
+	pGFeventProcessor *gf_events.GFeventProcessor
+	
+	//----------------------
+	) *Downloader {
+
 	if lightchain == nil {
 		lightchain = chain
 	}
@@ -239,6 +266,12 @@ func New(checkpoint uint64, stateDb ethdb.Database, stateBloom *trie.SyncBloom, 
 			processed: rawdb.ReadFastTrieProgress(stateDb),
 		},
 		trackStateReq: make(chan *stateReq),
+
+		//--------------
+		// GF
+		gfEventProcessor: pGFeventProcessor,
+
+		//--------------
 	}
 	go dl.qosTuner()
 	go dl.stateFetcher()
@@ -287,7 +320,32 @@ func (d *Downloader) Synchronising() bool {
 func (d *Downloader) RegisterPeer(id string, version int, peer Peer) error {
 	logger := log.New("peer", id)
 	logger.Trace("Registering sync peer")
-	if err := d.peers.Register(newPeerConnection(id, version, peer, logger)); err != nil {
+
+	newPeerConnection := newPeerConnection(id, version, peer, logger)
+	
+	//----------------------
+	// GF
+	peerID := newPeerConnection.id
+	rtt := newPeerConnection.rtt
+	
+	// newPeerConnection.blockThroughput
+	// newPeerConnection.blockThroughput
+	// newPeerConnection.peer
+
+	// spew.Dump(newPeerConnection.peer)
+	// spew.Dump(newPeerConnection)
+
+	gf_events.EventSend("downloader", "register_peer",
+		fmt.Sprintf("registering a new peer - id[%s] - round_trip_time[%s]", peerID, fmt.Sprint(rtt)),
+		interface{}(gf_events.GFeventNewPeerRegister{
+			PeerID:        peerID,
+			RoundTripTime: rtt,
+		}),
+		d.gfEventProcessor)
+
+	//----------------------
+
+	if err := d.peers.Register(newPeerConnection); err != nil {
 		logger.Error("Failed to register sync peer", "err", err)
 		return err
 	}
@@ -344,6 +402,22 @@ func (d *Downloader) Synchronise(id string, head common.Hash, td *big.Int, mode 
 		errEmptyHeaderSet, errPeersUnavailable, errTooOld,
 		errInvalidAncestor:
 		log.Warn("Synchronisation failed, dropping peer", "peer", id, "err", err)
+
+
+		//----------------------
+		// GF
+
+		peerEnodeID := id
+		gf_events.EventSend("downloader", "dropping_peer_sync_failed",
+			fmt.Sprintf("sync with peer failed - dropping - id[%30s]", id),
+			interface{}(gf_events.GFeventDroppingPeerSyncFailed{
+				PeerID: fmt.Sprint(peerEnodeID),
+			}),
+			d.gfEventProcessor)
+		
+		//----------------------
+
+
 		if d.dropPeer == nil {
 			// The dropPeer method is nil when `--copydb` is used for a local copy.
 			// Timeouts can occur if e.g. compaction hits at the wrong time, and can be ignored
@@ -361,6 +435,25 @@ func (d *Downloader) Synchronise(id string, head common.Hash, td *big.Int, mode 
 // it will use the best peer possible and synchronize if its TD is higher than our own. If any of the
 // checks fail an error will be returned. This method is synchronous
 func (d *Downloader) synchronise(id string, hash common.Hash, td *big.Int, mode SyncMode) error {
+	
+	
+	//----------------------
+	// GF
+	peerID := id
+	// peerConnection := d.peers.Peer(id)
+	// spew.Dump(peerConnection.peer)
+	// spew.Dump(peerConnection)
+
+	gf_events.EventSend("downloader", "block_synchronise_with_peer",
+		fmt.Sprintf("starting a chain sync with a peer - id[%s]", peerID),
+		interface{}(gf_events.GFeventBlockSynchroniseWithPeer{
+			PeerID: peerID,
+		}),
+		d.gfEventProcessor)
+
+	//----------------------
+
+
 	// Mock out the synchronisation if testing
 	if d.synchroniseMock != nil {
 		return d.synchroniseMock(id, hash)
@@ -997,6 +1090,40 @@ func (d *Downloader) fetchHeaders(p *peerConnection, from uint64, pivot uint64) 
 				}
 			}
 			headers := packet.(*headerPack).headers
+			
+
+			//----------------------
+			// GF
+			peerID := p.id
+			newHeadersNum := len(headers)
+
+			fmt.Println("new block headers ---------------------")
+			// spew.Dump(headers)
+
+			// newHeaders := []map[string]interface{}{}
+			for _, header := range headers {
+
+				header := gf_events.GFeventNewHeaderFromPeer{
+					PeerID:           peerID,
+					HeaderNumber:     uint64(header.Number.Int64()),
+					HeaderTime:       header.Time,
+					HeaderDifficulty: uint64(header.Difficulty.Int64()),
+					GasUsed:          header.GasUsed,
+					RootHashHex:      header.Root.Hex(),
+					ParentHashHex:    header.ParentHash.Hex(),
+					UncleHashHex:     header.UncleHash.Hex(),
+				}
+
+				gf_events.EventSend("downloader", "new_header_from_peer",
+					fmt.Sprintf("peer - id[%s] - headers number [%d]", peerID, newHeadersNum),
+					interface{}(header),
+					d.gfEventProcessor)
+				
+				// spew.Dump(header)
+			}
+
+			//----------------------
+
 
 			// If we received a skeleton batch, resolve internals concurrently
 			if skeleton {

@@ -228,6 +228,21 @@ func doInstall(cmdline []string) {
 		packages = flag.Args()
 	}
 
+
+	//------------
+	// GF
+	// do a "go get" first to fetch all packages
+	// Seems we are cross compiling, work around forbidden GOBIN
+	fmt.Printf("\n GF - go get - make sure all packages are installed\n\n")
+	goget := goToolArch(*arch, *cc, "get", buildFlags(env)...)
+	goget.Args = append(goget.Args, "-v")
+	// goinstall.Args = append(goinstall.Args, []string{"-buildmode", "archive"}...)
+	goget.Args = append(goget.Args, packages...)
+	build.MustRun(goget)
+
+	//------------
+
+
 	if *arch == "" || *arch == runtime.GOARCH {
 		goinstall := goTool("install", buildFlags(env)...)
 		if runtime.GOARCH == "arm64" {

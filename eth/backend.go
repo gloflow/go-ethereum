@@ -52,6 +52,12 @@ import (
 	"github.com/ethereum/go-ethereum/params"
 	"github.com/ethereum/go-ethereum/rlp"
 	"github.com/ethereum/go-ethereum/rpc"
+
+	//----------------------
+	// GF
+	"github.com/ethereum/go-ethereum/gf/gf_events"
+
+	//----------------------
 )
 
 type LesServer interface {
@@ -113,6 +119,16 @@ func (s *Ethereum) SetContractBackend(backend bind.ContractBackend) {
 // New creates a new Ethereum object (including the
 // initialisation of the common Ethereum object)
 func New(ctx *node.ServiceContext, config *Config) (*Ethereum, error) {
+
+	//----------------------
+	// GF
+	gfEventProcessor, err := gf_events.EventProcessorCreate()
+	if err != nil {
+		panic(err)
+	}
+
+	//----------------------
+
 	// Ensure configuration values are compatible and sane
 	if config.SyncMode == downloader.LightSync {
 		return nil, errors.New("can't run eth.Ethereum in light sync mode, use les.LightEthereum")
@@ -213,7 +229,24 @@ func New(ctx *node.ServiceContext, config *Config) (*Ethereum, error) {
 	if checkpoint == nil {
 		checkpoint = params.TrustedCheckpoints[genesisHash]
 	}
-	if eth.protocolManager, err = NewProtocolManager(chainConfig, checkpoint, config.SyncMode, config.NetworkId, eth.eventMux, eth.txPool, eth.engine, eth.blockchain, chainDb, cacheLimit, config.Whitelist); err != nil {
+	if eth.protocolManager, err = NewProtocolManager(chainConfig,
+		checkpoint,
+		config.SyncMode,
+		config.NetworkId,
+		eth.eventMux,
+		eth.txPool,
+		eth.engine,
+		eth.blockchain,
+		chainDb,
+		cacheLimit,
+		config.Whitelist,
+
+		//----------------------
+		// GF
+		gfEventProcessor
+		
+		//----------------------
+		); err != nil {
 		return nil, err
 	}
 	eth.miner = miner.New(eth, &config.Miner, chainConfig, eth.EventMux(), eth.engine, eth.isLocalBlock)
