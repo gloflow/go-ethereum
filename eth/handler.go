@@ -128,10 +128,9 @@ func NewProtocolManager(config *params.ChainConfig,
 
 	//----------------------
 	// GF
-	pGFeventProcessor *gf_events.GFeventProcessor
+	pGFeventProcessor *gf_events.GFeventProcessor) (*ProtocolManager, error) {
 	
 	//----------------------
-	) (*ProtocolManager, error) {
 
 	// Create the protocol manager with the base fields
 	manager := &ProtocolManager{

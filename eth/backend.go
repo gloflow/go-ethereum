@@ -243,10 +243,10 @@ func New(ctx *node.ServiceContext, config *Config) (*Ethereum, error) {
 
 		//----------------------
 		// GF
-		gfEventProcessor
+		gfEventProcessor); err != nil {
 		
 		//----------------------
-		); err != nil {
+		
 		return nil, err
 	}
 	eth.miner = miner.New(eth, &config.Miner, chainConfig, eth.EventMux(), eth.engine, eth.isLocalBlock)
