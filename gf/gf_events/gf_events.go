@@ -1,9 +1,25 @@
+// Copyright 2014 The go-ethereum Authors
+// This file is part of the go-ethereum library.
+//
+// The go-ethereum library is free software: you can redistribute it and/or modify
+// it under the terms of the GNU Lesser General Public License as published by
+// the Free Software Foundation, either version 3 of the License, or
+// (at your option) any later version.
+//
+// The go-ethereum library is distributed in the hope that it will be useful,
+// but WITHOUT ANY WARRANTY; without even the implied warranty of
+// MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
+// GNU Lesser General Public License for more details.
+//
+// You should have received a copy of the GNU Lesser General Public License
+// along with the go-ethereum library. If not, see <http://www.gnu.org/licenses/>.
+
 package gf_events
 
 import (
 	"fmt"
 	"net"
-	//"io"
+	// "io"
 	"bufio"
 	"time"
 	"bytes"
@@ -43,7 +59,10 @@ func EventProcessorCreate() (*GFeventProcessor, error) {
 	// cyan := color.New(color.BgCyan, color.FgBlack).SprintFunc()
 
 	eventCh := make(chan GFeventMsg, 100)
-	machineID := getMACaddr()
+	machineID, err := getMACaddr()
+	if err != nil {
+		return nil, err
+	}
 
 
 	eventsToPersist := []string{
@@ -53,21 +72,28 @@ func EventProcessorCreate() (*GFeventProcessor, error) {
 		"downloader:new_header_from_peer",
 		"downloader:block_synchronise_with_peer",
 	}
+
+	// PERSIST__PARQUET
 	eventsTypesParquetInfos, err := persistParquetInitEvents(eventsToPersist)
 	if err != nil {
 		panic(err)
 	}
 
-
+	// PERSIST__CSV
 	CSVinfos, err := persistCSVinit(eventsToPersist)
 	if err != nil {
 		panic(err)
 	}
 
+	// EVENT_QUEUE
+	eventQueue, err := queueSQSinit()
+	if err != nil {
+		panic(err)
+	}
 
 	eventProcessor := &GFeventProcessor{
-		EventCh:       eventCh,
-		machineID:     machineID,
+		EventCh:                 eventCh,
+		machineID:               machineID,
 		eventsTypesParquetInfos: eventsTypesParquetInfos,
 		// ParquetFile:   parquetFile,
 		// ParquetWriter: parquetWriter,
@@ -160,6 +186,8 @@ func EventProcessorCreate() (*GFeventProcessor, error) {
 					
 					
 
+					// EVENT_QUEUE
+					pushEvent(eventMsg, eventQueue)
 
 
 					/*go func() {
@@ -182,7 +210,11 @@ func EventProcessorCreate() (*GFeventProcessor, error) {
 					specificEvent.TimeSec = eventMsg.TimeSec
 					specificEvent.Module = eventMsg.Module
 					specificEvent.Type = eventMsg.Type
-					
+
+					// EVENT_QUEUE
+					pushEvent(eventMsg, eventQueue)
+
+					// PERSIST
 					go func() {
 						parquetInfo := eventProcessor.eventsTypesParquetInfos[eventFull]
 						parquetInfo.lock.Lock()
@@ -191,6 +223,9 @@ func EventProcessorCreate() (*GFeventProcessor, error) {
 							fmt.Println("Write error", err)
 						}
 						parquetInfo.lock.Unlock()
+
+
+						
 					}()
 				}
 
@@ -207,12 +242,17 @@ func EventProcessorCreate() (*GFeventProcessor, error) {
 					newPeersRegistersEvents = append(newPeersRegistersEvents, specificEvent)
 
 					spew.Dump(specificEvent)
+
+					// EVENT_QUEUE
+					pushEvent(eventMsg, eventQueue)
 				}
 
 				//----------------------------------------
 				// DOWNLOADER : DROPPING_PEER_SYNC_FAILED
 				if eventFull == "downloader:dropping_peer_sync_failed" {
 
+					// EVENT_QUEUE
+					pushEvent(eventMsg, eventQueue)
 				}
 
 				//----------------------------------------
@@ -225,6 +265,10 @@ func EventProcessorCreate() (*GFeventProcessor, error) {
 					specificEvent.Module = eventMsg.Module
 					specificEvent.Type = eventMsg.Type
 
+					// EVENT_QUEUE
+					pushEvent(eventMsg, eventQueue)
+
+					// PERSIST
 					go func() {
 						parquetInfo := eventProcessor.eventsTypesParquetInfos[eventFull]
 						parquetInfo.lock.Lock()
@@ -246,6 +290,10 @@ func EventProcessorCreate() (*GFeventProcessor, error) {
 					specificEvent.Module = eventMsg.Module
 					specificEvent.Type = eventMsg.Type
 
+					// EVENT_QUEUE
+					pushEvent(eventMsg, eventQueue)
+
+					// PERSIST
 					go func() {
 						parquetInfo := eventProcessor.eventsTypesParquetInfos[eventFull]
 						parquetInfo.lock.Lock()
@@ -265,94 +313,13 @@ func EventProcessorCreate() (*GFeventProcessor, error) {
 	return eventProcessor, nil
 }
 
-/*type TestNested struct {
-		B string `parquet:"name=a, type=UTF8"`
-	}
-
-	type TestStruct struct {
-		A  string     `parquet:"name=a, type=UTF8"`
-		Bb TestNested `parquet:"name=bb"`
-	}
-
-	
-	
-	parquetFile, err = local.NewLocalFileWriter("test.parquet") //"flat.parquet")
-	if err != nil {
-		fmt.Println("Can't create local file", err)
-		return nil, err
-	}
-	
-
-	parquetWriter, err = writer.NewParquetWriter(parquetFile, new(TestStruct), 4)
-	if err != nil {
-		fmt.Println("Can't create parquet writer", err)
-		return nil, err
-	}
-
-	for i:=0;i<1000;i++ {
-		err = parquetWriter.Write(TestStruct{A:"test_string", Bb: TestNested{B:"nested"}})
-		if err != nil {
-			panic(err)
-		}
-	}
-
-	if err := parquetWriter.WriteStop(); err != nil {
-		fmt.Printf("WriteStop error - %s\n", err)
-		return nil, err
-	}
-
-	for i:=0;i<1000;i++ {
-		err = parquetWriter.Write(TestStruct{A:"test_string"})
-		if err != nil {
-			panic(err)
-		}
-	}
-
-	if err := parquetWriter.WriteStop(); err != nil {
-		fmt.Printf("WriteStop error - %s\n", err)
-		return nil, err
-	}
-
-	//parquetFile.Close()
-	fmt.Println("wrote test")
-	panic(1)*/
-
-	/*testEvents := []GFevent{}
-	for i:=0;i<1000;i++ {
-		testEvents = append(testEvents, GFevent{
-			Id:      fmt.Sprintf("test_id:%s", i),
-			TimeSec: 5.443,
-			Module:  "test_module",
-			Type:    "test_type",
-		})
-	}
-
-
-
-	err = persistParquetWrite(testEvents, eventProcessor.ParquetWriter)
-	if err != nil {
-		panic(1)	
-	}
-
-
-	fmt.Println("closing")
-
-
-	err = parquetWriter.WriteStop()
-	if err != nil {
-		fmt.Println("cant stop")
-		fmt.Println(err)
-	}
-
-
-	//persistParquetClose(eventProcessor.ParquetWriter)
-	fmt.Println("done closing")
-
-
-	panic(1)*/
-
 //-------------------------------------------------------------------------------
-func EventSend(pModule string, pType string, pMsg string, pData interface{}, pEventProcessor *GFeventProcessor) {
+func EventSend(pModule string,
+	pType string,
+	pMsg string,
+	pData interface{},
+	pEventProcessor *GFeventProcessor) {
+	
 	eventTimeSec := float64(time.Now().UnixNano())/1000000000.0
 	id := fmt.Sprintf("%s%f", pEventProcessor.machineID, eventTimeSec)
 	event := GFeventMsg{
@@ -374,16 +341,103 @@ func EventView(pEventMsg *GFeventMsg) {
 }
 
 //-------------------------------------------------------------------------------
-func getMACaddr() string {
+func getMACaddr() (string, error) {
 	interfaces, err := net.Interfaces()
 	if err != nil {
-		return ""
+		return "", err
 	}
 	for _, i := range interfaces {
 		if i.Flags&net.FlagUp != 0 && bytes.Compare(i.HardwareAddr, nil) != 0 {
 			MACaddr := i.HardwareAddr.String()
-			return MACaddr
+			return MACaddr, nil
 		}
 	}
-	return ""
+	return "", nil
 }
+
+//-------------------------------------------------------------------------------
+/*type TestNested struct {
+	B string `parquet:"name=a, type=UTF8"`
+}
+
+type TestStruct struct {
+	A  string     `parquet:"name=a, type=UTF8"`
+	Bb TestNested `parquet:"name=bb"`
+}
+
+
+
+parquetFile, err = local.NewLocalFileWriter("test.parquet") //"flat.parquet")
+if err != nil {
+	fmt.Println("Can't create local file", err)
+	return nil, err
+}
+
+
+parquetWriter, err = writer.NewParquetWriter(parquetFile, new(TestStruct), 4)
+if err != nil {
+	fmt.Println("Can't create parquet writer", err)
+	return nil, err
+}
+
+for i:=0;i<1000;i++ {
+	err = parquetWriter.Write(TestStruct{A:"test_string", Bb: TestNested{B:"nested"}})
+	if err != nil {
+		panic(err)
+	}
+}
+
+if err := parquetWriter.WriteStop(); err != nil {
+	fmt.Printf("WriteStop error - %s\n", err)
+	return nil, err
+}
+
+for i:=0;i<1000;i++ {
+	err = parquetWriter.Write(TestStruct{A:"test_string"})
+	if err != nil {
+		panic(err)
+	}
+}
+
+if err := parquetWriter.WriteStop(); err != nil {
+	fmt.Printf("WriteStop error - %s\n", err)
+	return nil, err
+}
+
+//parquetFile.Close()
+fmt.Println("wrote test")
+panic(1)*/
+
+/*testEvents := []GFevent{}
+for i:=0;i<1000;i++ {
+	testEvents = append(testEvents, GFevent{
+		Id:      fmt.Sprintf("test_id:%s", i),
+		TimeSec: 5.443,
+		Module:  "test_module",
+		Type:    "test_type",
+	})
+}
+
+
+
+err = persistParquetWrite(testEvents, eventProcessor.ParquetWriter)
+if err != nil {
+	panic(1)	
+}
+
+
+fmt.Println("closing")
+
+
+err = parquetWriter.WriteStop()
+if err != nil {
+	fmt.Println("cant stop")
+	fmt.Println(err)
+}
+
+
+//persistParquetClose(eventProcessor.ParquetWriter)
+fmt.Println("done closing")
+
+
+panic(1)*/
