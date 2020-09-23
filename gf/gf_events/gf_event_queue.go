@@ -1,4 +1,4 @@
-// Copyright 2014 The go-ethereum Authors
+// Copyright 2020 The go-ethereum Authors
 // This file is part of the go-ethereum library.
 //
 // The go-ethereum library is free software: you can redistribute it and/or modify
@@ -26,7 +26,7 @@ import (
 //-----------------------------------------------------------------
 type GFevenstQueueInfo struct {
     awsSQSclient   *sqs.SQS
-    awsSQSqueueUrl string
+    awsSQSqueueURL string
 }
 
 //-----------------------------------------------------------------
@@ -48,7 +48,7 @@ func queueSQSinit() (*GFevenstQueueInfo, error) {
 
     queueInfo := &GFevenstQueueInfo{
         awsSQSclient:   svc,
-        awsSQSqueueUrl: qURL,
+        awsSQSqueueURL: qURL,
     }
 
     return queueInfo, nil
@@ -58,29 +58,29 @@ func queueSQSinit() (*GFevenstQueueInfo, error) {
 func pushEvent(pEvent GFeventMsg,
     pQueueInfo *GFevenstQueueInfo) error {
 
-    qURL := ""
 	result, err := pQueueInfo.awsSQSclient.SendMessage(&sqs.SendMessageInput{
-        DelaySeconds: aws.Int64(10),
+        DelaySeconds:      aws.Int64(10),
         MessageAttributes: map[string]*sqs.MessageAttributeValue{
-			"TimeSec": &sqs.MessageAttributeValue{
+
+			"time_sec": &sqs.MessageAttributeValue{
                 DataType:    aws.String("String"),
                 StringValue: aws.String(fmt.Sprint(pEvent.TimeSec)),
             },
-			"Module": &sqs.MessageAttributeValue{
+			"module": &sqs.MessageAttributeValue{
                 DataType:    aws.String("String"),
                 StringValue: aws.String(pEvent.Module),
             },
-            "Type": &sqs.MessageAttributeValue{
+            "type": &sqs.MessageAttributeValue{
                 DataType:    aws.String("String"),
                 StringValue: aws.String(pEvent.Type),
             },
-            "Msg": &sqs.MessageAttributeValue{
+            "msg": &sqs.MessageAttributeValue{
                 DataType:    aws.String("String"),
                 StringValue: aws.String(pEvent.Msg),
             },
         },
-        MessageBody: aws.String("Information about current NY Times fiction bestseller for week of 12/11/2016."),
-        QueueUrl:    &qURL,
+        MessageBody: aws.String(""),
+        QueueUrl:    &pQueueInfo.awsSQSqueueURL,
     })
 
     if err != nil {

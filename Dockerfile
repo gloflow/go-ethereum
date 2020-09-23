@@ -10,7 +10,20 @@ RUN cd /go-ethereum && make geth
 FROM alpine:latest
 
 RUN apk add --no-cache ca-certificates
-COPY --from=builder /go-ethereum/build/bin/geth /usr/local/bin/
 
+#------------
 EXPOSE 8545 8546 8547 30303 30303/udp
 ENTRYPOINT ["geth"]
+
+#------------
+# PYTHON
+
+RUN apk --update add python3 \
+    python3-dev
+
+RUN apk --update add py-pip
+RUN pip install --upgrade pip
+
+#------------
+
+COPY --from=builder /go-ethereum/build/bin/geth /usr/local/bin/

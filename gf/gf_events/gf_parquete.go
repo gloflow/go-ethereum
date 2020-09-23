@@ -1,4 +1,4 @@
-// Copyright 2014 The go-ethereum Authors
+// Copyright 2019 The go-ethereum Authors
 // This file is part of the go-ethereum library.
 //
 // The go-ethereum library is free software: you can redistribute it and/or modify
@@ -24,11 +24,11 @@ import (
 	// "bytes"
 	// "os"
 	// "io"
-	// "github.com/xitongsys/parquet-go/parquet"
 	"github.com/xitongsys/parquet-go/source"
 	"github.com/xitongsys/parquet-go-source/local"
-	// "github.com/xitongsys/parquet-go-source/writerfile"
 	"github.com/xitongsys/parquet-go/writer"
+	// "github.com/xitongsys/parquet-go/parquet"
+	// "github.com/xitongsys/parquet-go-source/writerfile"
 	// "github.com/xitongsys/parquet-go/reader"
 	// "github.com/davecgh/go-spew/spew"
 )
