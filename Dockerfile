@@ -11,8 +11,7 @@ FROM alpine:latest
 
 RUN apk add --no-cache ca-certificates
 
-#------------
-EXPOSE 8545 8546 8547 30303 30303/udp
+EXPOSE 8545 8546 30303 30303/udp
 ENTRYPOINT ["geth"]
 
 #------------
