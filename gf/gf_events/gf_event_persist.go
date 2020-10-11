@@ -1,3 +1,19 @@
+// Copyright 2019 The go-ethereum Authors
+// This file is part of the go-ethereum library.
+//
+// The go-ethereum library is free software: you can redistribute it and/or modify
+// it under the terms of the GNU Lesser General Public License as published by
+// the Free Software Foundation, either version 3 of the License, or
+// (at your option) any later version.
+//
+// The go-ethereum library is distributed in the hope that it will be useful,
+// but WITHOUT ANY WARRANTY; without even the implied warranty of
+// MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
+// GNU Lesser General Public License for more details.
+//
+// You should have received a copy of the GNU Lesser General Public License
+// along with the go-ethereum library. If not, see <http://www.gnu.org/licenses/>.
+
 package gf_events
 
 import (
@@ -8,7 +24,7 @@ import (
 )
 
 //-------------------------------------------------------------------------------
-type GFeventCSVinfo struct {
+type GFeventsCSVinfo struct {
 	eventFull string
 	filePath  string
 	file      *os.File
@@ -16,16 +32,16 @@ type GFeventCSVinfo struct {
 }
 
 //-------------------------------------------------------------------------------
-func persistCSVinit(pEvents []string) (map[string]*GFeventCSVinfo, error) {
+func persistCSVinit(pEvents []string) (map[string]*GFeventsCSVinfo, error) {
 
-	CSVinfos := map[string]*GFeventCSVinfo{}
+	CSVinfos := map[string]*GFeventsCSVinfo{}
 	for _, eventFull := range pEvents {
 		
 		CSVfile, eventTypeFilePath, err := persistCSVnewFile(eventFull)
 		if err != nil {
 			return nil, err
 		}
-		CSVinfo := &GFeventCSVinfo{
+		CSVinfo := &GFeventsCSVinfo{
 			eventFull: eventFull,
 			filePath:  eventTypeFilePath,
 			file:      CSVfile,
@@ -37,14 +53,14 @@ func persistCSVinit(pEvents []string) (map[string]*GFeventCSVinfo, error) {
 }
 
 //-------------------------------------------------------------------------------
-func persistCSVreinitFile(pCSVinfo *GFeventCSVinfo, pEventFull string) (*GFeventCSVinfo, error) {
+func persistCSVreinitFile(pCSVinfo *GFeventsCSVinfo, pEventFull string) (*GFeventsCSVinfo, error) {
 
 	pCSVinfo.file.Close()
 	newCSVfile, eventTypeFilePath, err := persistCSVnewFile(pCSVinfo.eventFull)
 	if err != nil {
 		return nil, err
 	}
-	newCSVinfo := &GFeventCSVinfo{
+	newCSVinfo := &GFeventsCSVinfo{
 		eventFull: pCSVinfo.eventFull,
 		filePath:  eventTypeFilePath,
 		file:      newCSVfile,
@@ -66,7 +82,7 @@ func persistCSVnewFile(pEventFull string) (*os.File, string, error) {
 }
 
 //-------------------------------------------------------------------------------
-func persistCSVwrite(pData interface{}, pCSVfile *os.File) {
+func persistCSVwrite(pData interface{}, pCSVfile *os.File) error {
 
 	csvContent, err := gocsv.MarshalString([]interface{}{&pData,}) // Get all clients as CSV string
 	// err = gocsv.MarshalFile(&clients, clientsFile) // Use this to save the CSV back to the file
@@ -79,6 +95,7 @@ func persistCSVwrite(pData interface{}, pCSVfile *os.File) {
 
 	_, err = pCSVfile.WriteString(csvContent)
 	if err != nil {
-
+		return err
 	}
+	return nil
 }
