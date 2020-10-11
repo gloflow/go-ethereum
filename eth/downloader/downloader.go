@@ -233,10 +233,9 @@ func New(checkpoint uint64,
 
 	//----------------------
 	// GF
-	pGFeventProcessor *gf_events.GFeventProcessor
+	pGFeventProcessor *gf_events.GFeventProcessor) *Downloader {
 	
 	//----------------------
-	) *Downloader {
 
 	if lightchain == nil {
 		lightchain = chain
