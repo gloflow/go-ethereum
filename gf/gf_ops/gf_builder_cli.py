@@ -36,7 +36,7 @@ def main():
 	args_map = parse_args()
 
 	service_cont_image_tag_str  = "latest"
-    docker_user_str             = "glofloworg"
+	docker_user_str             = "glofloworg"
 	service_cont_image_name_str = f"{docker_user_str}/gf_go_ethereum:{service_cont_image_tag_str}"
 	service_cont_dockerfile_path_str = f"{modd_str}/../../Dockerfile"
 	
