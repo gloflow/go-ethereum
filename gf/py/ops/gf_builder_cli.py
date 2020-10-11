@@ -38,7 +38,7 @@ def main():
 	service_cont_image_tag_str  = "latest"
 	docker_user_str             = "glofloworg"
 	service_cont_image_name_str = f"{docker_user_str}/gf_go_ethereum:{service_cont_image_tag_str}"
-	service_cont_dockerfile_path_str = f"{modd_str}/../../Dockerfile"
+	service_cont_dockerfile_path_str = f"{modd_str}/../../../Dockerfile"
 	
 	
 	#------------------------
@@ -123,7 +123,7 @@ def build_containers(p_cont_image_name_str,
 	p_dockerfile_path_str,
 	p_docker_sudo_bool=False):
 	
-	docker_context_dir_str = f"{modd_str}/../.."
+	docker_context_dir_str = f"{modd_str}/../../.."
 
 	print("BUILDING CONTAINER -----------=========================")
 	print(f"container image name - {p_cont_image_name_str}")

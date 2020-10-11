@@ -14,17 +14,17 @@ volumes:
 
 steps:
 
-  #-------------------------------
-  # BUILD_GO
-  - name: build_go
-    image: glofloworg/gf_builder:latest
-    commands:
-      - make geth
-    when:
-      event:
-        - push
-      branch:
-        - gf
+  # #-------------------------------
+  # # BUILD_GO
+  # - name: build_go
+  #   image: glofloworg/gf_builder:latest
+  #   commands:
+  #     - make geth
+  #   when:
+  #     event:
+  #       - push
+  #     branch:
+  #       - gf
 
   #-------------------------------
   # BUILD_CONTAINERS
