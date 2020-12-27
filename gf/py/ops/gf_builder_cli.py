@@ -109,7 +109,7 @@ def notify_completion(p_gf_notify_completion_url_str,
 
 	# HTTP_GET
 	data_map = {
-		"app_name": "gf_eth_monitor"
+		"app_name": "gf_go_ethereum"
 	}
 	r = requests.post(url_str, data=json.dumps(data_map))
 	print(r.text)

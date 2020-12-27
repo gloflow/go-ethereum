@@ -26,4 +26,8 @@ RUN pip install --upgrade pip
 
 #------------
 
+RUN mkdir -p /home/gf/data
+
+#------------
+
 COPY --from=builder /go-ethereum/build/bin/geth /usr/local/bin/

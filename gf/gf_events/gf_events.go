@@ -19,12 +19,13 @@ package gf_events
 import (
 	"fmt"
 	"net"
+	"os"
 	// "io"
-	"bufio"
+	// "bufio"
 	"time"
 	"bytes"
 	"github.com/fatih/color"
-	"github.com/gocarina/gocsv"
+	// "github.com/gocarina/gocsv"
 	"github.com/davecgh/go-spew/spew"
 	
 	// "github.com/xitongsys/parquet-go/source"
@@ -43,12 +44,14 @@ type GFeventProcessor struct {
 }
 
 type GFeventMsg struct {
-	Id      string
-	TimeSec float64
-	Module  string
-	Type    string
-	Msg     string
-	Data    interface{}
+	Id      string      `json:"id"`
+	TimeSec float64     `json:"time_sec"`
+	Region  string      `json:"region"`  // region in which this Eth node is running
+	NodeId  string      `json:"node_id"` // ID of this Eth node
+	Module  string      `json:"module"`
+	Type    string      `json:"type"`
+	Msg     string      `json:"msg"`
+	Data    interface{} `json:"data"`
 }
 
 //-------------------------------------------------------------------------------
@@ -65,36 +68,52 @@ func EventProcessorCreate() (*GFeventProcessor, error) {
 	}
 
 
-	eventsToPersist := []string{
+	/*eventsToPersist := []string{
 		"protocol_manager:handle_new_peer",
 		"protocol_manager:dropping_unsynced_node_during_fast_sync",
 		"downloader:register_peer",
 		"downloader:new_header_from_peer",
 		"downloader:block_synchronise_with_peer",
-	}
+	}*/
 
-	// PERSIST__PARQUET
+	/*// PERSIST__PARQUET
 	eventsTypesParquetInfos, err := persistParquetInitEvents(eventsToPersist)
 	if err != nil {
 		panic(err)
-	}
+	}*/
 
-	// PERSIST__CSV
+	/*// PERSIST__CSV
 	CSVinfos, err := persistCSVinit(eventsToPersist)
 	if err != nil {
 		panic(err)
-	}
+	}*/
 
 	// EVENT_QUEUE
-	eventQueue, err := queueSQSinit()
-	if err != nil {
-		panic(err)
-	}
 
+
+
+	fmt.Println(os.Environ())
+
+
+	SQSqueueName := os.Getenv("GF_AWS_SQS_QUEUE")
+	
+	var eventQueue *GFevenstQueueInfo
+
+	if SQSqueueName != "" {
+		initEventQueue, err := queueSQSinit(SQSqueueName)
+		if err != nil {
+			fmt.Println(err)
+			panic(err)
+		}
+		fmt.Println(eventQueue)
+
+		eventQueue = initEventQueue
+	}
+	
 	eventProcessor := &GFeventProcessor{
 		EventCh:                 eventCh,
 		machineID:               machineID,
-		eventsTypesParquetInfos: eventsTypesParquetInfos,
+		// eventsTypesParquetInfos: eventsTypesParquetInfos,
 		// ParquetFile:   parquetFile,
 		// ParquetWriter: parquetWriter,
 	}
@@ -147,18 +166,25 @@ func EventProcessorCreate() (*GFeventProcessor, error) {
 				// PROTOCOL_MANAGER : HANDLE_NEW_PEER
 				if eventFull == "protocol_manager:handle_new_peer" {
 					specificEvent := eventMsg.Data.(GFeventNewPeerLifecycle)
-					specificEvent.Id = eventMsg.Id
-					specificEvent.TimeSec = eventMsg.TimeSec
-					specificEvent.Module = eventMsg.Module
-					specificEvent.Type = eventMsg.Type
+					// specificEvent.Id = eventMsg.Id
+					// specificEvent.TimeSec = eventMsg.TimeSec
+					// specificEvent.Module = eventMsg.Module
+					// specificEvent.Type = eventMsg.Type
 	
 					newPeersLifecyclesEvents = append(newPeersLifecyclesEvents, specificEvent)
 
 					fmt.Printf("++++++++++++++++++++++++-------------------")
 					spew.Dump(specificEvent)
+					fmt.Println(eventQueue)
+
+
+					// EVENT_QUEUE
+					if eventQueue != nil {
+						queueSQSpushEvent(eventMsg, eventQueue)
+					}
 
 					
-					CSVinfo := CSVinfos[eventFull]
+					/*CSVinfo := CSVinfos[eventFull]
 					CSVfile := CSVinfo.file
 					w := bufio.NewWriter(CSVfile)
 					
@@ -182,13 +208,7 @@ func EventProcessorCreate() (*GFeventProcessor, error) {
 							panic(err)
 						}
 						CSVinfos[eventFull] = newCSVinfo
-					}
-					
-					
-
-					// EVENT_QUEUE
-					pushEvent(eventMsg, eventQueue)
-
+					}*/
 
 					/*go func() {
 						parquetInfo := eventProcessor.eventsTypesParquetInfos[eventFull]
@@ -206,15 +226,18 @@ func EventProcessorCreate() (*GFeventProcessor, error) {
 				if eventFull == "protocol_manager:dropping_unsynced_node_during_fast_sync" {
 
 					specificEvent := eventMsg.Data.(GFeventDroppingUnsyncedNodeDuringFastSync)
-					specificEvent.Id = eventMsg.Id
-					specificEvent.TimeSec = eventMsg.TimeSec
-					specificEvent.Module = eventMsg.Module
-					specificEvent.Type = eventMsg.Type
+
+					fmt.Println(specificEvent)
+
+					// specificEvent.Id = eventMsg.Id
+					// specificEvent.TimeSec = eventMsg.TimeSec
+					// specificEvent.Module = eventMsg.Module
+					// specificEvent.Type = eventMsg.Type
 
 					// EVENT_QUEUE
-					pushEvent(eventMsg, eventQueue)
+					// queueSQSpushEvent(eventMsg, eventQueue)
 
-					// PERSIST
+					/*// PERSIST
 					go func() {
 						parquetInfo := eventProcessor.eventsTypesParquetInfos[eventFull]
 						parquetInfo.lock.Lock()
@@ -226,7 +249,7 @@ func EventProcessorCreate() (*GFeventProcessor, error) {
 
 
 						
-					}()
+					}()*/
 				}
 
 				//----------------------------------------
@@ -234,17 +257,17 @@ func EventProcessorCreate() (*GFeventProcessor, error) {
 				if eventFull == "downloader:register_peer" {
 
 					specificEvent := eventMsg.Data.(GFeventNewPeerRegister)
-					specificEvent.Id = eventMsg.Id
-					specificEvent.TimeSec = eventMsg.TimeSec
-					specificEvent.Module = eventMsg.Module
-					specificEvent.Type = eventMsg.Type
+					// specificEvent.Id = eventMsg.Id
+					// specificEvent.TimeSec = eventMsg.TimeSec
+					// specificEvent.Module = eventMsg.Module
+					// specificEvent.Type = eventMsg.Type
 
 					newPeersRegistersEvents = append(newPeersRegistersEvents, specificEvent)
 
 					spew.Dump(specificEvent)
 
 					// EVENT_QUEUE
-					pushEvent(eventMsg, eventQueue)
+					// queueSQSpushEvent(eventMsg, eventQueue)
 				}
 
 				//----------------------------------------
@@ -252,7 +275,7 @@ func EventProcessorCreate() (*GFeventProcessor, error) {
 				if eventFull == "downloader:dropping_peer_sync_failed" {
 
 					// EVENT_QUEUE
-					pushEvent(eventMsg, eventQueue)
+					// queueSQSpushEvent(eventMsg, eventQueue)
 				}
 
 				//----------------------------------------
@@ -260,15 +283,17 @@ func EventProcessorCreate() (*GFeventProcessor, error) {
 				if eventFull == "downloader:block_synchronise_with_peer" {
 
 					specificEvent := eventMsg.Data.(GFeventBlockSynchroniseWithPeer)
-					specificEvent.Id = eventMsg.Id
-					specificEvent.TimeSec = eventMsg.TimeSec
-					specificEvent.Module = eventMsg.Module
-					specificEvent.Type = eventMsg.Type
+					// specificEvent.Id = eventMsg.Id
+					// specificEvent.TimeSec = eventMsg.TimeSec
+					// specificEvent.Module = eventMsg.Module
+					// specificEvent.Type = eventMsg.Type
+
+					fmt.Println(specificEvent)
 
 					// EVENT_QUEUE
-					pushEvent(eventMsg, eventQueue)
+					// queueSQSpushEvent(eventMsg, eventQueue)
 
-					// PERSIST
+					/*// PERSIST
 					go func() {
 						parquetInfo := eventProcessor.eventsTypesParquetInfos[eventFull]
 						parquetInfo.lock.Lock()
@@ -277,7 +302,7 @@ func EventProcessorCreate() (*GFeventProcessor, error) {
 							fmt.Println("Write error", err)
 						}
 						parquetInfo.lock.Unlock()
-					}()
+					}()*/
 				}
 
 				//----------------------------------------
@@ -285,15 +310,17 @@ func EventProcessorCreate() (*GFeventProcessor, error) {
 				if eventFull == "downloader:new_header_from_peer" {
 
 					specificEvent := eventMsg.Data.(GFeventNewHeaderFromPeer)
-					specificEvent.Id = eventMsg.Id
-					specificEvent.TimeSec = eventMsg.TimeSec
-					specificEvent.Module = eventMsg.Module
-					specificEvent.Type = eventMsg.Type
+					// specificEvent.Id = eventMsg.Id
+					// specificEvent.TimeSec = eventMsg.TimeSec
+					// specificEvent.Module = eventMsg.Module
+					// specificEvent.Type = eventMsg.Type
+
+					fmt.Println(specificEvent)
 
 					// EVENT_QUEUE
-					pushEvent(eventMsg, eventQueue)
+					// queueSQSpushEvent(eventMsg, eventQueue)
 
-					// PERSIST
+					/*// PERSIST
 					go func() {
 						parquetInfo := eventProcessor.eventsTypesParquetInfos[eventFull]
 						parquetInfo.lock.Lock()
@@ -302,7 +329,7 @@ func EventProcessorCreate() (*GFeventProcessor, error) {
 							fmt.Println("Write error", err)
 						}
 						parquetInfo.lock.Unlock()
-					}()
+					}()*/
 				}
 
 				//----------------------------------------

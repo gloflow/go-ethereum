@@ -18,6 +18,7 @@ package gf_events
 
 import (
     "fmt"
+    "encoding/json"
 	"github.com/aws/aws-sdk-go/aws"
     "github.com/aws/aws-sdk-go/aws/session"
     "github.com/aws/aws-sdk-go/service/sqs"
@@ -30,41 +31,62 @@ type GFevenstQueueInfo struct {
 }
 
 //-----------------------------------------------------------------
-func queueSQSinit() (*GFevenstQueueInfo, error) {
+func queueSQSinit(pSQSqueueName string) (*GFevenstQueueInfo, error) {
 
 
 
-	sess := session.Must(session.NewSessionWithOptions(session.Options{
+    //----------------------------
+    // SESSION
+	/*sess := session.Must(session.NewSessionWithOptions(session.Options{
         SharedConfigState: session.SharedConfigEnable,
-    }))
+    }))*/
 
+    sess, err := session.NewSession()
+    if err != nil {
+        return nil, err
+    }
     svc := sqs.New(sess)
 
-    // URL to our queue
-    qURL := "QueueURL"
+    //----------------------------
+    // GET_QUEUE_URL
+    result, err := svc.GetQueueUrl(&sqs.GetQueueUrlInput{
+        QueueName: aws.String(pSQSqueueName),
+    })
+    if err != nil {
+        return nil, err
+    }
+    SQSqueueURL := *result.QueueUrl
 
-
-
+    //----------------------------
 
     queueInfo := &GFevenstQueueInfo{
         awsSQSclient:   svc,
-        awsSQSqueueURL: qURL,
+        awsSQSqueueURL: SQSqueueURL,
     }
 
     return queueInfo, nil
 }
 
 //-----------------------------------------------------------------
-func pushEvent(pEvent GFeventMsg,
+func queueSQSpushEvent(pEvent interface{},
     pQueueInfo *GFevenstQueueInfo) error {
 
+
+    eventDataJSONencoded, err := json.Marshal(pEvent)
+    if err != nil {
+        return err
+    }
+
+    fmt.Println("SENDING AWS SQS msg----")
 	result, err := pQueueInfo.awsSQSclient.SendMessage(&sqs.SendMessageInput{
-        DelaySeconds:      aws.Int64(10),
-        MessageAttributes: map[string]*sqs.MessageAttributeValue{
+        MessageBody: aws.String(string(eventDataJSONencoded)),
+        QueueUrl:    &pQueueInfo.awsSQSqueueURL,
+        // DelaySeconds: aws.Int64(10),
+        /*MessageAttributes: map[string]*sqs.MessageAttributeValue{
 
 			"time_sec": &sqs.MessageAttributeValue{
                 DataType:    aws.String("String"),
-                StringValue: aws.String(fmt.Sprint(pEvent.TimeSec)),
+                StringValue: aws.String(fmt.Sprintf("%f", pEvent.TimeSec)),
             },
 			"module": &sqs.MessageAttributeValue{
                 DataType:    aws.String("String"),
@@ -78,12 +100,12 @@ func pushEvent(pEvent GFeventMsg,
                 DataType:    aws.String("String"),
                 StringValue: aws.String(pEvent.Msg),
             },
-        },
-        MessageBody: aws.String(""),
-        QueueUrl:    &pQueueInfo.awsSQSqueueURL,
+        },*/
     })
 
     if err != nil {
+        fmt.Println("FAILED TO SEND SQS MSG")
+        fmt.Println(fmt.Sprint(err))
         return err
     }
 
