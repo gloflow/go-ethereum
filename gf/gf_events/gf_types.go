@@ -24,16 +24,8 @@ import (
 // PROTOCOL_MANAGER
 
 // GF_EVENT__NEW_PEER_LIFECYCLE
+// IMPORTANT!! - this is the main message interpreted for new peers being processed
 type GFeventNewPeerLifecycle struct {
-	/*//--------------------------
-	// GF_EVENT
-	Id      string  `parquet:"name=gf_id,    type=UTF8"   csv:"gf_id"`
-	TimeSec float64 `parquet:"name=time_sec, type=DOUBLE" csv:"time_sec"`
-	Module  string  `parquet:"name=module,   type=UTF8"   csv:"module"` // protocol_manager
-	Type    string  `parquet:"name=type,     type=UTF8"   csv:"type"`   // handle_new_peer
-	
-	//--------------------------*/
-
 	PeerEnodeID   string `parquet:"name=peer_enode_id,  type=UTF8" csv:"peer_enode_id"  json:"peer_enode_id"`
 	Name          string `parquet:"name=name,           type=UTF8" csv:"name"           json:"name"` 
 	RemoteAddress string `parquet:"name=remote_address, type=UTF8" csv:"remote_address" json:"remote_address"` 
@@ -42,14 +34,6 @@ type GFeventNewPeerLifecycle struct {
 
 // GF_EVENT__DROPPING_UNSYNCED_NODE_DURING_FAST_SYNC
 type GFeventDroppingUnsyncedNodeDuringFastSync struct {
-	/*//--------------------------
-	//GF_EVENT
-	Id      string  `parquet:"name=gf_id,    type=UTF8"`
-	TimeSec float64 `parquet:"name=time_sec, type=DOUBLE"`
-	Module  string  `parquet:"name=module,   type=UTF8"` // protocol_manager
-	Type    string  `parquet:"name=type,     type=UTF8"` // dropping_unsynced_node_during_fast_sync
-
-	//--------------------------*/
 	PeerEnodeID   string `parquet:"name=peer_enode_id,  type=UTF8" json:"peer_enode_id"`
 	Name          string `parquet:"name=name,           type=UTF8" json:"name"` 
 	RemoteAddress string `parquet:"name=remote_address, type=UTF8" json:"remote_address"` 
@@ -61,28 +45,12 @@ type GFeventDroppingUnsyncedNodeDuringFastSync struct {
 
 // GF_EVENT__NEW_PEER_REGISTER
 type GFeventNewPeerRegister struct {
-	/*//--------------------------
-	//GF_EVENT
-	Id      string  `parquet:"name=gf_id,    type=UTF8"`
-	TimeSec float64 `parquet:"name=time_sec, type=DOUBLE"`
-	Module  string  `parquet:"name=module,   type=UTF8"` // downloader
-	Type    string  `parquet:"name=type,     type=UTF8"` // register_peer
-
-	//--------------------------*/
 	PeerID        string        `parquet:"name=peer_id, type=UTF8" json:"peer_id"`
 	RoundTripTime time.Duration // FIX!! - serialize to float64
 }
 
 // GF_EVENT__NEW_HEADER_FROM_PEER
 type GFeventNewHeaderFromPeer struct {
-	/*//--------------------------
-	// GF_EVENT
-	Id      string  `parquet:"name=gf_id,    type=UTF8"`
-	TimeSec float64 `parquet:"name=time_sec, type=DOUBLE"`
-	Module  string  `parquet:"name=module,   type=UTF8"` // downloader
-	Type    string  `parquet:"name=type,     type=UTF8"` // new_header_from_peer
-	
-	//--------------------------*/
 	PeerID           string `parquet:"name=peer_id,           type=UTF8"  json:"peer_id"`
 	HeaderNumber     uint64 `parquet:"name=header_number,     type=INT64" json:"header_number"`
 	HeaderTime       uint64 `parquet:"name=header_time,       type=INT64" json:"header_time"`
@@ -95,27 +63,10 @@ type GFeventNewHeaderFromPeer struct {
 
 // GF_EVENT__BLOCK_SYNCHRONISE_WITH_PEER
 type GFeventBlockSynchroniseWithPeer struct {
-	/*//--------------------------
-	// GF_EVENT
-	Id      string  `parquet:"name=gf_id,    type=UTF8"`
-	TimeSec float64 `parquet:"name=time_sec, type=DOUBLE"`
-	Module  string  `parquet:"name=module,   type=UTF8"` // downloader
-	Type    string  `parquet:"name=type,     type=UTF8"` // block_synchronise_with_peer
-	
-	//--------------------------*/
 	PeerID string `parquet:"name=peer_id, type=UTF8" json:"peer_id"`
-
 }
 
 // GF_EVENT__DROPPING_PEER_SYNC_FAILED
 type GFeventDroppingPeerSyncFailed struct {
-	/*//--------------------------
-	// GF_EVENT
-	Id      string  `parquet:"name=gf_id,    type=UTF8"`
-	TimeSec float64 `parquet:"name=time_sec, type=DOUBLE"`
-	Module  string  `parquet:"name=module,   type=UTF8"`
-	Type    string  `parquet:"name=type,     type=UTF8"`
-	
-	//--------------------------*/
 	PeerID string `parquet:"name=peer_id, type=UTF8"`
 }

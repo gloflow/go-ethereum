@@ -181,6 +181,10 @@ func EventProcessorCreate() (*GFeventProcessor, error) {
 					// EVENT_QUEUE
 					if eventQueue != nil {
 						queueSQSpushEvent(eventMsg, eventQueue)
+
+
+
+						
 					}
 
 					

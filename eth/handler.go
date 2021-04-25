@@ -351,6 +351,7 @@ func (pm *ProtocolManager) runPeer(p *peer) error {
 	return pm.handle(p)
 }
 
+//-------------------------------------------------------------------------------
 // handle is the callback invoked to manage the life cycle of an eth peer. When
 // this function terminates, the peer is disconnected.
 func (pm *ProtocolManager) handle(p *peer) error {
@@ -359,16 +360,22 @@ func (pm *ProtocolManager) handle(p *peer) error {
 	//----------------------
 	// GF
 	
-	peerEnodeID := p.Peer.ID()
-	peerName := p.Peer.Name()
+	peerEnodeID   := p.Peer.ID()
+	peerName      := p.Peer.Name()
 	remoteAddress := p.Peer.RemoteAddr()
+
 	gf_events.EventSend("protocol_manager", "handle_new_peer",
 		fmt.Sprintf("handle the lifecycle of a new peer - name[%70s] - ip[%s] - enode_id[%s]", peerName, fmt.Sprint(remoteAddress), peerEnodeID),
 		interface{}(gf_events.GFeventNewPeerLifecycle{
 			PeerEnodeID:   fmt.Sprint(peerEnodeID),
 			Name:          peerName,
 			RemoteAddress: fmt.Sprint(remoteAddress),
-			LocalAddress:  fmt.Sprint(p.Peer.LocalAddr()),
+
+			// FIX!! - this should be renamed to "PublicAddress".
+			//         also, dont gather the Address from this member "p.Peer.LocalAddr", which in a containerized environment
+			//         will not be the true public IP due to various network isolation mechanisms. Instead pass the public IP as an
+			//         ENV var, or acquire it via a dedicated function that gathers it via some external mechanism.
+			LocalAddress: fmt.Sprint(p.Peer.LocalAddr()),
 		}),
 		pm.gfEventProcessor)
 	
@@ -446,6 +453,7 @@ func (pm *ProtocolManager) handle(p *peer) error {
 	}
 }
 
+//-------------------------------------------------------------------------------
 // handleMsg is invoked whenever an inbound message is received from a remote
 // peer. The remote connection is torn down upon returning any error.
 func (pm *ProtocolManager) handleMsg(p *peer) error {
