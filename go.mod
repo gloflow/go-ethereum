@@ -3,8 +3,9 @@ module github.com/ethereum/go-ethereum
 go 1.15
 
 require (
-	github.com/Azure/azure-storage-blob-go v0.7.0
+	github.com/Azure/azure-storage-blob-go v0.10.0
 	github.com/VictoriaMetrics/fastcache v1.5.7
+	github.com/aws/aws-sdk-go v1.30.19
 	github.com/aws/aws-sdk-go-v2 v1.2.0
 	github.com/aws/aws-sdk-go-v2/config v1.1.1
 	github.com/aws/aws-sdk-go-v2/credentials v1.1.1
@@ -22,6 +23,7 @@ require (
 	github.com/fjl/memsize v0.0.0-20190710130421-bcb5799ab5e5
 	github.com/gballet/go-libpcsclite v0.0.0-20190607065134-2772fd86a8ff
 	github.com/go-stack/stack v1.8.0
+	github.com/gocarina/gocsv v0.0.0-20210408192840-02d7211d929d
 	github.com/golang/protobuf v1.4.3
 	github.com/golang/snappy v0.0.3-0.20201103224600-674baa8c7fc3
 	github.com/google/gofuzz v1.1.1-0.20200604201612-c04b05f3adfa
@@ -51,6 +53,8 @@ require (
 	github.com/syndtr/goleveldb v1.0.1-0.20210305035536-64b5b1c73954
 	github.com/tklauser/go-sysconf v0.3.5 // indirect
 	github.com/tyler-smith/go-bip39 v1.0.1-0.20181017060643-dbb3b84ba2ef
+	github.com/xitongsys/parquet-go v1.6.0
+	github.com/xitongsys/parquet-go-source v0.0.0-20201108113611-f372b7d813be
 	golang.org/x/crypto v0.0.0-20200622213623-75b288015ac9
 	golang.org/x/sys v0.0.0-20210316164454-77fc1eacc6aa
 	golang.org/x/text v0.3.4

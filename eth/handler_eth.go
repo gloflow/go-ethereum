@@ -30,6 +30,13 @@ import (
 	"github.com/ethereum/go-ethereum/log"
 	"github.com/ethereum/go-ethereum/p2p/enode"
 	"github.com/ethereum/go-ethereum/trie"
+
+	//----------------------
+	// GF
+	"github.com/ethereum/go-ethereum/gf/gf_events"
+	// "github.com/davecgh/go-spew/spew"
+
+	//----------------------
 )
 
 // ethHandler implements the eth.Backend interface to handle the various network

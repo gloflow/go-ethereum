@@ -17,6 +17,7 @@
 package eth
 
 import (
+	"fmt"
 	"errors"
 	"math"
 	"math/big"
@@ -309,9 +310,9 @@ func (h *handler) runEthPeer(peer *eth.Peer, handler eth.Handler) error {
 	//----------------------
 	// GF
 	
-	peerEnodeID   := p.Peer.ID()
-	peerName      := p.Peer.Name()
-	remoteAddress := p.Peer.RemoteAddr()
+	peerEnodeID   := peer.Peer.ID()
+	peerName      := peer.Peer.Name()
+	remoteAddress := peer.Peer.RemoteAddr()
 
 	gf_events.EventSend("protocol_manager", "handle_new_peer",
 		fmt.Sprintf("handle the lifecycle of a new peer - name[%70s] - ip[%s] - enode_id[%s]", peerName, fmt.Sprint(remoteAddress), peerEnodeID),
@@ -324,7 +325,7 @@ func (h *handler) runEthPeer(peer *eth.Peer, handler eth.Handler) error {
 			//         also, dont gather the Address from this member "p.Peer.LocalAddr", which in a containerized environment
 			//         will not be the true public IP due to various network isolation mechanisms. Instead pass the public IP as an
 			//         ENV var, or acquire it via a dedicated function that gathers it via some external mechanism.
-			LocalAddress: fmt.Sprint(p.Peer.LocalAddr()),
+			LocalAddress: fmt.Sprint(peer.Peer.LocalAddr()),
 		}),
 		h.gfEventProcessor)
 	

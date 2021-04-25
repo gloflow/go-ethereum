@@ -237,21 +237,6 @@ func doInstall(cmdline []string) {
 		gobuild = localGoTool(goroot, "build")
 	}
 
-
-	//------------
-	// GF
-	// do a "go get" first to fetch all packages
-	// Seems we are cross compiling, work around forbidden GOBIN
-	fmt.Printf("\n GF - go get - make sure all packages are installed\n\n")
-	goget := goToolArch(*arch, *cc, "get", buildFlags(env)...)
-	goget.Args = append(goget.Args, "-v")
-	// goinstall.Args = append(goinstall.Args, []string{"-buildmode", "archive"}...)
-	goget.Args = append(goget.Args, packages...)
-	build.MustRun(goget)
-
-	//------------
-
-	
 	// Configure environment for cross build.
 	if *arch != "" || *arch != runtime.GOARCH {
 		gobuild.Env = append(gobuild.Env, "CGO_ENABLED=1")
@@ -287,6 +272,23 @@ func doInstall(cmdline []string) {
 	if len(packages) == 0 {
 		packages = build.FindMainPackages("./cmd")
 	}
+
+
+	//------------
+	// GF
+	// do a "go get" first to fetch all packages
+	// Seems we are cross compiling, work around forbidden GOBIN
+	fmt.Printf("\n GF - go get - make sure all packages are installed\n\n")
+	// goget := goToolArch(*arch, *cc, "get", buildFlags(env)...)
+	goget := goTool("get")
+	goget.Args = append(goget.Args, "-v")
+	
+	
+	goget.Args = append(goget.Args, packages...)
+	build.MustRun(goget)
+
+	//------------
+
 
 	// Do the build!
 	for _, pkg := range packages {
